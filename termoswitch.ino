@@ -2,9 +2,12 @@
 #include <DHT.h>
 #include <LiquidCrystal.h>
 
+static const String VERSION = "0.2";
+
 #define PIN_RELAY 10 // вывод для реле
 #define DHTPIN 13     // вывод, к которому подключается датчик
 #define DHTTYPE DHT22   // DHT 22  (AM2302)
+#define LED_PIN 11 //вывод для LED
 
 static LiquidCrystal lcd(4, 5, 6, 7, 8, 9);
 static DHT dht(DHTPIN, DHTTYPE);
@@ -36,7 +39,8 @@ void eventModeChange()
     else
       autoMode = true;
     printData();
-    EEPROM.update(AUTOMODE_ADDR, autoMode); 
+    EEPROM.update(AUTOMODE_ADDR, autoMode);
+    EEPROM.update(RELEON_ADDR, releOn); 
   }
   millis_prev = millis();
 }
@@ -59,7 +63,7 @@ void itereateLowerTemperatureLimit()
 {
    lowerTemperatureLimit++;
    if(lowerTemperatureLimit > maxTemperature)
-    lowerTemperatureLimit = minTemperature;
+      lowerTemperatureLimit = minTemperature;
    EEPROM.update(LOWERTEMPERATURELIMIT_ADDR, lowerTemperatureLimit);
 }
 
@@ -68,11 +72,13 @@ void switchRele()
   if(releOn)
   {
     digitalWrite(PIN_RELAY, HIGH);
+    digitalWrite(LED_PIN, LOW);
     releOn = false; 
   }
   else
   {
     digitalWrite(PIN_RELAY, LOW);
+    digitalWrite(LED_PIN, HIGH);
     releOn = true;
   }
   EEPROM.update(RELEON_ADDR, releOn);
@@ -104,14 +110,19 @@ void printData()
 
 void startBanner()
 {
-  lcd.print("Strarting.");
+  lcd.setCursor(0, 0);
+  lcd.print(String("TermoSwitch v" + VERSION));
+  
+  lcd.setCursor(0, 1);
+  lcd.print("Strarting");
   delay(700);
-  lcd.clear();
-  lcd.print("Strarting..");
-  delay(700);
-  lcd.clear();
-  lcd.print("Strarting...");
-  delay(700);
+
+  for(int i = 9; i < 16; ++i)
+  {
+    lcd.setCursor(i, 1);
+    lcd.print(".");
+    delay(700);
+  }
 }
 
 void printToLCD()
@@ -148,11 +159,13 @@ void execAutoMode()
   if(temperature < lowerTemperatureLimit)
   {
     digitalWrite(PIN_RELAY, LOW);
+    digitalWrite(LED_PIN, HIGH);
     releOn = true;
   }
   if(temperature > lowerTemperatureLimit + 1)
   {
     digitalWrite(PIN_RELAY, HIGH);
+    digitalWrite(LED_PIN, LOW);
     releOn = false;
   }  
 }
@@ -169,6 +182,9 @@ void setup()
  
   pinMode(PIN_RELAY, OUTPUT); // Объявляем пин реле как выход
   digitalWrite(PIN_RELAY, HIGH); // Выключаем реле - посылаем высокий сигнал
+
+  pinMode(LED_PIN, OUTPUT); // Объявляем пин led
+  digitalWrite(LED_PIN, LOW); // Выключаем led
   
   Serial.begin(9600);
   dht.begin();
@@ -179,7 +195,10 @@ void setup()
   autoMode = EEPROM.read(AUTOMODE_ADDR);
   releOn = EEPROM.read(RELEON_ADDR);
   if(releOn)
+  {
     digitalWrite(PIN_RELAY, LOW);
+    digitalWrite(LED_PIN, HIGH);
+  }
   lowerTemperatureLimit = EEPROM.read(LOWERTEMPERATURELIMIT_ADDR);
 }
 
