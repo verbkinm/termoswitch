@@ -2,7 +2,7 @@
 #include <DHT.h>
 #include <LiquidCrystal.h>
 
-static const String VERSION = "0.2";
+static const String VERSION = "0.3";
 
 #define PIN_RELAY 10 // вывод для реле
 #define DHTPIN 13     // вывод, к которому подключается датчик
@@ -125,13 +125,39 @@ void startBanner()
   }
 }
 
+void printDrop()
+{
+  if(humidity < 20)
+    lcd.write((uint8_t)0);
+  else if(humidity > 20 && humidity < 40)
+    lcd.write((uint8_t)1);
+  else if(humidity > 40 && humidity < 60)
+    lcd.write((uint8_t)2);
+  else if(humidity > 80)
+    lcd.write((uint8_t)3);
+}
+
+void printThermomentr()
+{
+  if(temperature < 0)
+    lcd.write((uint8_t)4);
+  else if(temperature > 0 && temperature < 10)
+    lcd.write((uint8_t)5);
+  else if(temperature > 10 && temperature < 25)
+    lcd.write((uint8_t)6);
+  else if(temperature > 40)
+    lcd.write((uint8_t)7);
+}
+
 void printToLCD()
 {   
   lcd.clear(); 
   lcd.setCursor(0, 0);
-  
-  lcd.print(String("H:" + String(humidity , 1) + String("% "))); 
-  lcd.print(String("T:" + String(temperature, 1) + (char)223)); 
+
+  printDrop();
+  lcd.print(String(":" + String(humidity , 1) + String("% "))); 
+  printThermomentr();
+  lcd.print(String(":" + String(temperature, 1) + (char)223)); 
 
   lcd.setCursor(0, 1);
   
@@ -175,6 +201,98 @@ void execAutoMode()
 //  
 //}
 
+void lcdChars()
+{
+  byte drop20[8] = {
+    0b00100,
+    0b00100,
+    0b01010,
+    0b01010,
+    0b10001,
+    0b10001,
+    0b10001,
+    0b01110
+  };
+  byte drop40[8] = {
+    0b00100,
+    0b00100,
+    0b01010,
+    0b01010,
+    0b10001,
+    0b10001,
+    0b11111,
+    0b01110
+  };
+  byte drop60[8] = {
+    0b00100,
+    0b00100,
+    0b01010,
+    0b01010,
+    0b10001,
+    0b11111,
+    0b11111,
+    0b01110
+  };
+  byte drop80[8] = {
+    0b00100,
+    0b00100,
+    0b01110,
+    0b01110,
+    0b11111,
+    0b11111,
+    0b11111,
+    0b01110
+  };
+
+  byte thermometer0[8] = {
+    0b00100,
+    0b01010,
+    0b01010,
+    0b01010,
+    0b01010,
+    0b10001,
+    0b10001,
+    0b01110
+  };
+  byte thermometer10[8] = {
+    0b00100,
+    0b01010,
+    0b01010,
+    0b01010,
+    0b01010,
+    0b10001,
+    0b11111,
+    0b01110
+  };
+  byte thermometer25[8] = {
+    0b00100,
+    0b01010,
+    0b01010,
+    0b01010,
+    0b01110,
+    0b11111,
+    0b11111,
+    0b01110
+  };
+  byte thermometer40[8] = {
+    0b00100,
+    0b01110,
+    0b01110,
+    0b01110,
+    0b01110,
+    0b11111,
+    0b11111,
+    0b01110
+  };
+  lcd.createChar(0, drop20);
+  lcd.createChar(1, drop40);
+  lcd.createChar(2, drop60);
+  lcd.createChar(3, drop80);
+  lcd.createChar(4, thermometer0);
+  lcd.createChar(5, thermometer10);
+  lcd.createChar(6, thermometer25);
+  lcd.createChar(7, thermometer40);
+}
 void setup() 
 {
   attachInterrupt(0, eventModeChange, RISING);
@@ -187,7 +305,8 @@ void setup()
   digitalWrite(LED_PIN, LOW); // Выключаем led
   
   Serial.begin(9600);
-  dht.begin();
+  dht.begin();  
+  lcdChars();
   lcd.begin(16, 2);
 
   startBanner();
